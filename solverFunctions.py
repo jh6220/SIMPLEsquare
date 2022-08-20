@@ -364,7 +364,7 @@ def pressureCorrectionCoff(u,v,p,Au_p,Av_p,prob):
                 Ap[iA,iA-1] = Ap_s = -prob.rho*prob.dx_p[ix,0]**2/Av_p[ix,iy-1]
             #cell centre
             Ap[iA,iA] = -(Ap_e+Ap_w+Ap_n+Ap_s)
-            bp[iA] = -dmp[ix,iy]
+            bp[iA] = dmp[ix,iy]
             
             # in the incompressible N-V eqautions the only the pressure gradient appears
             # => at CV [0,0] the pressure value will be defined as 0 and all other pressure values
