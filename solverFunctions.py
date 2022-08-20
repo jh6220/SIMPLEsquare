@@ -89,28 +89,40 @@ class CFDproblem():
         self.Avd_x = self.mu * self.dy_v/self.lx_v # diffusion coeffcient for v-momentum-CV in x direction from current CV
         self.Avd_y = self.mu * self.dx_v/self.ly_v # diffusion coeffcient for v-momentum-CV in y direction from current CV
 
-def GenerateHarmonics(n,order,start=1):
+def GenerateHarmonics(t,order,start=1):
     # Generate a random function of given order for boundary definition
-    t = np.linspace(0,2*np.pi,n)
+    t_in = (t[0:-1]+t[1:])/2
+    t = np.concatenate([t_in,t+1,t_in+2,t+3])*2*np.pi/4
+    n = t.shape
     x = np.zeros(n)
     for i in range(start,order):
         x[:] += np.random.randn()*np.cos(float(i)*t)\
                    +(np.random.randn()*np.sin(float(i)*t))
     return x
 
-def GetBC2(nx):
-    #boundary condition
-    #axis=1 is the bc values along the wall; axis=0 differentiates the walls:
-    #0 - south; 1 - west; 2 - north; 3 - east
+def GenateDCfunc(x,y):
+    x_in = (x[0:-1]+x[1:])/2
+    x_concat = np.concat([x_in,x+1,x_in+2,x+3])
+    
+
+def GetBC2(x):
+    # boundary condition
+    # axis=1 is the bc values along the wall; axis=0 differentiates the walls:
+    # 0 - south; 1 - west; 2 - north; 3 - east
+    nx = x.size-1
     BCu = np.zeros((4,nx+2))
     BCv = np.zeros((4,nx+2))
-    
-    
+
+
     # u and v is defined continuous counter clock-wise around the boundary (south->east->north->west)
     order = 3
-    u = GenerateHarmonics(4*nx-2,order,start=0)
-    v = GenerateHarmonics(4*nx-2,order,start=0)
-    
+    u = GenerateHarmonics(x,order,start=0)
+    v = GenerateHarmonics(x,order,start=0)
+    # v[:] = 0
+
+    # define the wall lengths of the velocit control volumes that are pumping mass in/out of domain
+    dy = x[1:]-x[:-1]
+
     # defines mapping between the clock-wise u and v and the system of storing boundary values with BCu/BCv
     BCu[0,1:-2] = u[0:(nx-1)]
     BCu[1,1:-1] = u[3*nx-2:4*nx-2][::-1]
@@ -120,13 +132,13 @@ def GetBC2(nx):
     BCv[1,1:-2] = v[3*nx-1:4*nx-2][::-1]
     BCv[2,1:-1] = v[2*nx-1:3*nx-1][::-1]
     BCv[3,1:-2] = v[nx:2*nx-1]
-    
+
     # net massflow into the domain that needs to be corrected for to satisfy continuity
-    dm_dot = BCv[0,1:-1].sum() + BCu[1,1:-1].sum() - (BCv[2,1:-1].sum() + BCu[3,1:-1].sum())
-    BCv[0,1:-1] -= dm_dot/(4*nx)
-    BCu[1,1:-1] -= dm_dot/(4*nx)
-    BCv[2,1:-1] += dm_dot/(4*nx)
-    BCu[3,1:-1] += dm_dot/(4*nx)
+    dm_dot = (dy*BCv[0,1:-1]).sum() + (dy*BCu[1,1:-1]).sum() - ((dy*BCv[2,1:-1]).sum() + (dy*BCu[3,1:-1]).sum())
+    BCv[0,1:-1] -= dm_dot/(4)
+    BCu[1,1:-1] -= dm_dot/(4)
+    BCv[2,1:-1] += dm_dot/(4)
+    BCu[3,1:-1] += dm_dot/(4)
     return BCu,BCv,u,v
 
 def ApplyVelBC(u,v,prob):

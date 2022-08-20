@@ -16,8 +16,8 @@ rho = 1
 mu = 0.01
 nx = ny = n
 dt = np.inf
-alpha_uv = 0.07
-alpha_p = 0.02
+alpha_uv = 0.5
+alpha_p = 0.2
 CDS = True
 order = 1
 
@@ -28,10 +28,12 @@ y = x
 # define boundary condition for lid driven cavity flow
 # axis=1 is the bc values along the wall; axis=0 differentiates the walls:
 # 0 - south; 1 - west; 2 - north; 3 - south
-BCu = np.zeros((4,n+2))
-BCv = np.zeros((4,n+2))
-BCu[2,:] = 1 # u-velocity of 1 on the north boundary wall
-# BCu,BCv,u,v = sf.GetBC2(nx)
+# BCu = np.zeros((4,n+2))
+# BCv = np.zeros((4,n+2))
+# BCu[2,:] = 1 # u-velocity of 1 on the north boundary wall
+# BCu[1,12:17] = 1
+# BCu[3,12:17] = 1
+BCu,BCv,u_bc,v_bc = sf.GetBC2(x)
 
 # define the structure that hold all the constants of the CFD problem
 prob = sf.CFDproblem(x,y, rho, mu, BCu, BCv,dt,alpha_uv,alpha_p,CDS)
@@ -45,7 +47,7 @@ p,p_prime,p_vector = np.zeros((prob.nx,prob.ny)),np.zeros((prob.nx,prob.ny)),np.
 # define the iteration and convergence parameters 
 dif = 1
 dif_tolerance = 10**(-4)
-itt_max = 2000
+itt_max = 1000
 # define structure for storing the iteretion history 
 log = ppf.Log(itt_max)
 
