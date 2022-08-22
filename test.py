@@ -1,15 +1,7 @@
-import matplotlib.pyplot as plt
 import numpy as np
-import scipy as sp
-import scipy.sparse as sparse
-from scipy.sparse.linalg import spsolve,bicgstab
-from scipy.interpolate import LinearNDInterpolator
-import copy
-import time
 from multiprocessing import Pool
-import pandas as pd
 import solverFunctions as sf
-import analysisFunctions as af
+import os
 
 def SolveRandom(i):
     # Solves random BC problem and if converges saves the solution to a file, if does not coverge saves the boundary condition file

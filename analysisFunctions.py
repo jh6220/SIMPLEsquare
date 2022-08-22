@@ -1,13 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy as sp
-import scipy.sparse as sparse
-from scipy.sparse.linalg import spsolve,bicgstab
-from scipy.interpolate import LinearNDInterpolator,griddata
-import copy
-import time
+from scipy.interpolate import LinearNDInterpolator
 import pandas as pd
-import math
 import solverFunctions as sf
 
 
@@ -54,7 +48,7 @@ class Log():
         self.dt = np.zeros(n)
         self.itt = 0
         
-def PlotFlow(u,v,prob,title=None,c="k"):
+def PlotFlow(u,v,prob):
     # Plots the flow-field
     X_n,Y_n = np.meshgrid(prob.xc_u,prob.yc_v)
     u_n = (u[:,:-1]+u[:,1:])/2
@@ -74,9 +68,8 @@ def PlotFlow(u,v,prob,title=None,c="k"):
     axes.set_xlim([0,1])
     plt.contourf(X,Y,np.sqrt(u_c**2+v_c**2))
     plt.colorbar()
-    plt.streamplot(X,Y,u_c,v_c,color=c,linewidth=2,density=3)
+    plt.streamplot(X,Y,u_c,v_c,color="k",linewidth=2,density=3)
     plt.gca().set_aspect('equal', adjustable='box')
-    plt.title(title)
     plt.show()
 
 def PlotConvergence(log):

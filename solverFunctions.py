@@ -6,14 +6,9 @@
 # - u-velocity is defined in positive x index direction
 # - v-velocity is defined in positive y index direction
 # =============================================================================
-import matplotlib.pyplot as plt
 import numpy as np
-import scipy as sp
 import scipy.sparse as sparse
 from scipy.sparse.linalg import spsolve, bicgstab
-from scipy.interpolate import LinearNDInterpolator
-import copy
-import time
 import analysisFunctions as af
 
 def get1Dgrid(n,order=1):

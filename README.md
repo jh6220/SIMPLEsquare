@@ -1,0 +1,1 @@
+Python CFD (Computational Fluid Dynamics) solver using the SIMPLE algorithm with staggered grid.
