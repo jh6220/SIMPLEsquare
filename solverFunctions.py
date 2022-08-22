@@ -14,6 +14,7 @@ from scipy.sparse.linalg import spsolve, bicgstab
 from scipy.interpolate import LinearNDInterpolator
 import copy
 import time
+import analysisFunctions as af
 
 def get1Dgrid(n,order=1):
     # returns a distribution
@@ -32,7 +33,7 @@ class CFDproblem():
     #       CDS (central differencing scheme) correction
     #   - viscous shear coefficients
     
-    def __init__(self,x,y,rho,mu,BCu,BCv,dt=np.inf,alpha_uv=0.07,alpha_p=0.02,CDS=True):
+    def __init__(self,x,y,rho,mu,BCu,BCv,dt=np.inf,alpha_uv=0.07,alpha_p=0.02,CDS=True, dif_tolerance=10**(-4),max_iterations=2000):
         # definition for control volumes centroids (p-pressurel; u,v-momentum)
         self.xc_u = x
         self.yc_v = y
@@ -82,12 +83,21 @@ class CFDproblem():
         self.alpha_uv = alpha_uv # momentum under-relaxation factor
         self.alpha_p = alpha_p # pressure under-relaxation factor
         self.CDS = CDS # bool whether to use CDS correction
+        self.dif_tolerance = dif_tolerance
+        self.max_iterations = max_iterations
         
         # viscous shear coefficients
         self.Aud_x = self.mu * self.dy_u/self.lx_u # diffusion coeffcient for u-momentum-CV in x direction from current CV
         self.Aud_y = self.mu * self.dx_u/self.ly_u # diffusion coeffcient for u-momentum-CV in y direction from current CV
         self.Avd_x = self.mu * self.dy_v/self.lx_v # diffusion coeffcient for v-momentum-CV in x direction from current CV
         self.Avd_y = self.mu * self.dx_v/self.ly_v # diffusion coeffcient for v-momentum-CV in y direction from current CV
+
+def GetProblem(n,order_grid,rho=1,mu=0.01):
+    x = get1Dgrid(n+1,order=order_grid)
+    y = x
+    BCu,BCv,_,_,_,_ = GetBC2(x,order = 5,continuous=False)
+    prob = CFDproblem(x,y, rho, mu, BCu, BCv)
+    return prob
 
 def GenerateHarmonics(t,order,start=1):
     # Generate a random function of given order for boundary definition
@@ -100,12 +110,24 @@ def GenerateHarmonics(t,order,start=1):
                    +(np.random.randn()*np.sin(float(i)*t))
     return x
 
-def GenateDCfunc(x,y):
-    x_in = (x[0:-1]+x[1:])/2
-    x_concat = np.concat([x_in,x+1,x_in+2,x+3])
+def GenerateDiscontinuous(t,order):
+    # Generate a random function of given order for boundary definition
+    t_in = (t[0:-1]+t[1:])/2
+    t = np.concatenate([t_in,t+1,t_in+2,t+3])/4
+    n = t.shape
+    # x = np.random.randn()*np.ones(n)
+    x = np.zeros(n)
+    for i in range(order):
+        t1 = t - np.random.rand()
+        t2 = t - np.random.rand()
+        # x[:] += np.random.randn()*np.cos(float(i)*t)\
+        #            +(np.random.randn()*np.sin(float(i)*t))
+        x[:] += np.random.randn()*np.abs(np.abs(np.heaviside(t1,0.5)-np.heaviside(t2,0.5))-np.random.randint(0,2,)) #####
+    x -= x.mean()
+    return x
     
 
-def GetBC2(x):
+def GetBC2(x,order = 3,continuous=True):
     # boundary condition
     # axis=1 is the bc values along the wall; axis=0 differentiates the walls:
     # 0 - south; 1 - west; 2 - north; 3 - east
@@ -115,10 +137,13 @@ def GetBC2(x):
 
 
     # u and v is defined continuous counter clock-wise around the boundary (south->east->north->west)
-    order = 3
-    u = GenerateHarmonics(x,order,start=0)
-    v = GenerateHarmonics(x,order,start=0)
-    # v[:] = 0
+    
+    if continuous:
+        u = GenerateHarmonics(x,order,start=0)
+        v = GenerateHarmonics(x,order,start=0)
+    else:
+        u = GenerateDiscontinuous(x,order)
+        v = GenerateDiscontinuous(x,order)
 
     # define the wall lengths of the velocit control volumes that are pumping mass in/out of domain
     dy = x[1:]-x[:-1]
@@ -139,7 +164,16 @@ def GetBC2(x):
     BCu[1,1:-1] -= dm_dot/(4)
     BCv[2,1:-1] += dm_dot/(4)
     BCu[3,1:-1] += dm_dot/(4)
-    return BCu,BCv,u,v
+    
+    BCu[0,1:-2] -= np.cos(x[1:-1]*np.pi)*dm_dot/(4)
+    BCv[1,1:-2] -= np.cos(x[1:-1]*np.pi)*dm_dot/(4)
+    BCu[2,1:-2] -= np.cos(x[1:-1]*np.pi)*dm_dot/(4)
+    BCv[3,1:-2] -= np.cos(x[1:-1]*np.pi)*dm_dot/(4)
+    
+    u_cor = np.concatenate([BCu[0,1:-2],BCu[3,1:-1],BCu[2,1:-2][::-1],BCu[1,1:-1][::-1]])
+    v_cor = np.concatenate([BCv[0,1:-1],BCv[3,1:-2],BCv[2,1:-1][::-1],BCv[1,1:-2][::-1]])
+    
+    return BCu,BCv,u,v,u_cor,v_cor
 
 def ApplyVelBC(u,v,prob):
     # applyies the boundary condition the 2d-array of velocities
@@ -218,9 +252,14 @@ def MomentumEqU(u,v,p,prob):
             Au[iA,iA] = Au_p[ix,iy] = prob.rho*prob.dx_u[ix,0]*prob.dy_u[0,iy]/prob.dt-\
             (Au_e+Au_w+Au_n+Au_s)+\
             (mu_e[ix,iy]-mu_w[ix,iy])+(mu_n[ix,iy]-mu_s[ix,iy])
+            # inclusion of the under-relaxation factor
+            Au[iA,iA] /= prob.alpha_uv
+
             #source-term
             #pressure term + unsteady term
             bu[iA] += prob.dy_u[0,iy]*(p[ix,iy]-p[ix+1,iy]) + prob.rho*prob.dx_u[ix,0]*prob.dy_u[0,iy]*u[ix+1,iy+1]/prob.dt
+            # inclusion of the under-relaxation factor
+            bu[iA] += (1-prob.alpha_uv)*Au_p[ix,iy]*u[ix+1,iy+1]/prob.alpha_uv
             
             if prob.CDS:
             # central-difference-scheme correction ( + F_UDS_(m-1) - F_CDS_(m-1)) to the source term
@@ -285,10 +324,14 @@ def MomentumEqV(u,v,p,prob):
             Av[iA,iA] = Av_p[ix,iy] = prob.rho*prob.dx_v[ix,0]*prob.dy_v[0,iy]/prob.dt-\
             (Av_e+Av_w+Av_n+Av_s)+\
             (mv_e[ix,iy]-mv_w[ix,iy])+(mv_n[ix,iy]-mv_s[ix,iy])
+            # inclusion of the under-relaxation factor
+            Av[iA,iA] /= prob.alpha_uv
             
-            #source-term
-            #pressure term + unsteady term
+            # source-term
+            # pressure term + unsteady term
             bv[iA] += prob.dx_v[ix,0]*(p[ix,iy]-p[ix,iy+1]) + prob.rho*prob.dx_v[ix,0]*prob.dy_v[0,iy]*v[ix+1,iy+1]/prob.dt
+            # inclusion of the under-relaxation factor
+            bv[iA] += (1-prob.alpha_uv)*Av_p[ix,iy]*v[ix+1,iy+1]/prob.alpha_uv
             
             if prob.CDS:
             #central-difference-scheme correction ( + F_UDS_(m-1) - F_CDS_(m-1))
@@ -409,3 +452,107 @@ def VelocityCorrection(p_prime,Au_p,Av_p,u,v,prob):
             v_prime[ix,iy] = -prob.dx_p[ix,0]*(p_prime[ix,iy+1]-p_prime[ix,iy])/Av_p[ix,iy]
     
     return u_prime,v_prime
+
+def SolveProblem(prob,showProgress=False):
+    # initialize arrays storing the fluid properties
+    u,v = np.zeros((prob.nx+1,prob.ny+2)),np.zeros((prob.nx+2,prob.ny+1)) # if reshaped/flattened aixs=1 (y) will remain together
+    u_star,v_star = np.zeros((prob.nx+1,prob.ny+2)),np.zeros((prob.nx+2,prob.ny+1)) # intermediate step in the calculation
+    u_vector,v_vector = u[1:-1,1:-1].flatten(),v[1:-1,1:-1].flatten()
+    p,p_prime,p_vector = np.zeros((prob.nx,prob.ny)),np.zeros((prob.nx,prob.ny)),np.zeros(prob.nx*prob.ny)
+    
+    # define the iteration and convergence parameters 
+    dif = 1
+    itt_max = prob.max_iterations
+    # define structure for storing the iteretion history 
+    log = af.Log(itt_max)
+    
+    u,v = ApplyVelBC(u,v,prob)
+
+    while (dif>prob.dif_tolerance and log.itt<itt_max):
+        # Iterate the fluid properties until the convergence criteria is satisfied or
+        # the maximum number of iterations is reached
+        
+        Au,bu,Au_p = MomentumEqU(u,v,p,prob)
+        Av,bv,Av_p = MomentumEqV(u,v,p,prob)
+        log.u_res[log.itt],log.v_res[log.itt] = af.CalcMomentumResiduals_A(u,v,Au,Av,bu,bv)
+        
+        u_star[:,:] = u[:,:]
+        v_star[:,:] = v[:,:]
+        u_star,_ = SolveMomentum(Au,bu,u_star)
+        v_star,_ = SolveMomentum(Av,bv,v_star)
+        u_star,v_star = ApplyVelBC(u_star,v_star,prob)
+        
+        log.con_res[log.itt] = af.CalcContinuityResiduals(u_star,v_star,prob)
+        log.res[log.itt] = log.u_res[log.itt]+log.v_res[log.itt]+log.con_res[log.itt]
+        
+        Ap,bp,_ = pressureCorrectionCoff(u_star,v_star,p,Au_p,Av_p,prob)
+        p_prime,_ = SolvePressure(Ap,bp,prob)
+        u_prime,v_prime = VelocityCorrection(p_prime,Au_p,Av_p,u,v,prob)
+        u_star[1:-1,1:-1] += prob.alpha_uv*u_prime
+        v_star[1:-1,1:-1] += prob.alpha_uv*v_prime
+        p += prob.alpha_p*p_prime
+        
+        dif = np.linalg.norm(u-u_star)+np.linalg.norm(v-v_star)+np.linalg.norm(p_prime)
+        # dif = np.square(u-u_star).mean()+np.square(v-v_star).mean()+np.square(p_prime).mean()
+        log.dif[log.itt] = dif
+        
+        u[:,:] = u_star[:,:]
+        v[:,:] = v_star[:,:]
+        u,v = ApplyVelBC(u,v,prob)
+        
+        log.itt+=1
+        if showProgress:
+            print('\rdif={:.4g}; res={:.4g}; itt={}\t'.format(dif,log.res[log.itt-1],log.itt),end='')
+    
+    if showProgress:
+        print('===>done')
+
+    return u,v,p,log
+
+def SolveCFD(n,order_grid,i=1,order_bc = 5,continuous=False,alpha_uv = 0.3,alpha_p = 0.1,dif_tolerance=10**(-4),max_iterations=2000):
+    # constants definition
+    rho = 1
+    mu = 0.01
+    nx = ny = n
+    dt = np.inf
+    CDS = True
+    
+    # get the 1D discritization grid in x and y direction
+    x = get1Dgrid(n+1,order_grid)
+    y = x
+    
+    # define random boundary condition for lid driven cavity flow
+    order_bc = 5
+    BCu,BCv,_,_,_,_ = GetBC2(x,order=order_bc,continuous=continuous)
+    
+    # define the structure that hold all the constants of the CFD problem
+    prob = CFDproblem(x,y, rho, mu, BCu, BCv,dt,alpha_uv,alpha_p,CDS,dif_tolerance,max_iterations)
+    
+    try:
+        # try to solve the CFD problem
+        u,v,p,log = SolveProblem(prob,showProgress=False)
+        print('i={}; dif={:.4g}; res={:.4g}; itt={}\t\t'.format(i,log.dif[log.itt-1],log.res[log.itt-1],log.itt))
+        return (log.dif[log.itt-1]<(dif_tolerance)),u,v,p,prob,log
+    except:
+        print('i={}... error'.format(i))
+        return False,None,None,None,prob,log
+
+def SolveCFDfromBC(BCu,BCv,i,alpha_uv=0.15,alpha_p=0.05,order_grid=1,rho=1,mu=0.01,dt=np.inf,CDS=True,dif_tolerance=10**(-4),showProgress=False,max_iterations=2000):
+    # constants definition
+    n = BCu.shape[1]-2
+    
+    # get the 1D discritization grid in x and y direction
+    x = get1Dgrid(n+1,order_grid)
+    y = x
+    
+    # define the structure that hold all the constants of the CFD problem
+    prob = CFDproblem(x,y, rho, mu, BCu, BCv,dt,alpha_uv,alpha_p,CDS,dif_tolerance,max_iterations)
+    
+    try:
+        # try to solve the CFD problem
+        u,v,p,log = SolveProblem(prob,showProgress=showProgress)
+        print('i={}; dif={:.4g}; res={:.4g}; itt={}\t\t'.format(i,log.dif[log.itt-1],log.res[log.itt-1],log.itt))
+        return (log.dif[log.itt-1]<(dif_tolerance)),u,v,p,prob,log
+    except:
+        print('i={}... error'.format(i))
+        return False,None,None,None,prob,log

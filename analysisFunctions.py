@@ -54,7 +54,7 @@ class Log():
         self.dt = np.zeros(n)
         self.itt = 0
         
-def PlotFlow(u,v,prob):
+def PlotFlow(u,v,prob,title=None,c="k"):
     # Plots the flow-field
     X_n,Y_n = np.meshgrid(prob.xc_u,prob.yc_v)
     u_n = (u[:,:-1]+u[:,1:])/2
@@ -74,8 +74,9 @@ def PlotFlow(u,v,prob):
     axes.set_xlim([0,1])
     plt.contourf(X,Y,np.sqrt(u_c**2+v_c**2))
     plt.colorbar()
-    plt.streamplot(X,Y,u_c,v_c,color="k",linewidth=2,density=3)
+    plt.streamplot(X,Y,u_c,v_c,color=c,linewidth=2,density=3)
     plt.gca().set_aspect('equal', adjustable='box')
+    plt.title(title)
     plt.show()
 
 def PlotConvergence(log):

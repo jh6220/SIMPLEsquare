@@ -12,8 +12,8 @@ import solverFunctions as sf
 import analysisFunctions as af
 
 # constants definition
-n = 30 # number of pressure control volumes in each direction
-Re = 100 # reyonolds number
+n = 60 # number of pressure control volumes in each direction
+Re = 10000 # reyonolds number
 rho = 1
 mu = 1/Re
 nx = ny = n
@@ -21,7 +21,7 @@ dt = np.inf # time step length
 alpha_uv = 0.3
 alpha_p = 0.1
 CDS = True # whether to use CDS correction (the algorithm uses UDS with CDS correction in the source term)
-order = 2 # order of the deference in grid size between middle and near the boundary
+order = 3 # order of the deference in grid size between middle and near the boundary
 
 # get the 1D discritization grid in x and y direction
 x = sf.get1Dgrid(n+1,order)
@@ -46,7 +46,7 @@ p,p_prime,p_vector = np.zeros((prob.nx,prob.ny)),np.zeros((prob.nx,prob.ny)),np.
 # define the iteration and convergence parameters 
 dif = 1
 dif_tolerance = 10**(-4)
-itt_max = 1000
+itt_max = 4000
 # define structure for storing the iteretion history 
 log = af.Log(itt_max)
 
@@ -79,9 +79,9 @@ while (dif>dif_tolerance and log.itt<itt_max):
     Ap,bp,dmp = sf.pressureCorrectionCoff(u_star,v_star,p,Au_p,Av_p,prob)
     p_prime,p_vector = sf.SolvePressure(Ap,bp,prob)
     u_prime,v_prime = sf.VelocityCorrection(p_prime,Au_p,Av_p,u,v,prob)
-    u_star[1:-1,1:-1] += alpha_uv*u_prime
-    v_star[1:-1,1:-1] += alpha_uv*v_prime
-    p += alpha_p*p_prime
+    u_star[1:-1,1:-1] += prob.alpha_uv*u_prime
+    v_star[1:-1,1:-1] += prob.alpha_uv*v_prime
+    p += prob.alpha_p*p_prime
     
     dif = np.linalg.norm(u-u_star)+np.linalg.norm(v-v_star)+np.linalg.norm(p_prime)
     log.dif[log.itt] = dif
@@ -97,4 +97,4 @@ print("\ndone")
 
 af.PlotConvergence(log)
 af.PlotFlow(u,v,prob)
-af.CompareWithBenchmark(u, v, prob)
+# af.CompareWithBenchmark(u, v, prob)
