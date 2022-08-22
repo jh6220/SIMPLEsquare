@@ -1,0 +1,6 @@
+10000NUcavLQ   !Problem Name
+'./'           !Input Folder
+'./'           !Output Folder
+2              !Element Type
+1 1            !Formatted(1)/Unformatted(0) for Input and Output (2 values needed)
+1              !Restart using prior values (if they exist) (1 - YES, 0 - NO)

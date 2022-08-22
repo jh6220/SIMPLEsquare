@@ -1,5 +1,5 @@
 # =============================================================================
-# - id dirven cavity flow benchmark solved using using SIMPLE algorithm with
+# - Lid driven cavity flow benchmark solved using using SIMPLE algorithm with
 # staggered, variable size grid (finer near the boundaries)
 # - The finite volume with CDS (central difference scheme) correction is used
 # for discretization.
@@ -13,7 +13,7 @@ import analysisFunctions as af
 
 # constants definition
 n = 60 # number of pressure control volumes in each direction
-Re = 10000 # reyonolds number
+Re = 5000 # reyonolds number
 rho = 1
 mu = 1/Re
 nx = ny = n
@@ -21,7 +21,7 @@ dt = np.inf # time step length
 alpha_uv = 0.3
 alpha_p = 0.1
 CDS = True # whether to use CDS correction (the algorithm uses UDS with CDS correction in the source term)
-order = 3 # order of the deference in grid size between middle and near the boundary
+order = 1 # order of the deference in grid size between middle and near the boundary
 
 # get the 1D discritization grid in x and y direction
 x = sf.get1Dgrid(n+1,order)
@@ -38,10 +38,10 @@ BCu[2,:] = 1 # u-velocity of 1 on the north boundary wall
 prob = sf.CFDproblem(x,y, rho, mu, BCu, BCv,dt,alpha_uv,alpha_p,CDS)
 
 # initialize arrays storing the fluid properties
-u,v = np.zeros((prob.nx+1,prob.ny+2)),np.zeros((prob.nx+2,prob.ny+1)) # if reshaped/flattened aixs=1 (y) will remain together
-u_star,v_star = np.zeros((prob.nx+1,prob.ny+2)),np.zeros((prob.nx+2,prob.ny+1)) # intermediate step in the calculation
-u_vector,v_vector = u[1:-1,1:-1].flatten(),v[1:-1,1:-1].flatten()
-p,p_prime,p_vector = np.zeros((prob.nx,prob.ny)),np.zeros((prob.nx,prob.ny)),np.zeros(prob.nx*prob.ny)
+# u,v = np.zeros((prob.nx+1,prob.ny+2)),np.zeros((prob.nx+2,prob.ny+1)) # if reshaped/flattened aixs=1 (y) will remain together
+# u_star,v_star = np.zeros((prob.nx+1,prob.ny+2)),np.zeros((prob.nx+2,prob.ny+1)) # intermediate step in the calculation
+# u_vector,v_vector = u[1:-1,1:-1].flatten(),v[1:-1,1:-1].flatten()
+# p,p_prime,p_vector = np.zeros((prob.nx,prob.ny)),np.zeros((prob.nx,prob.ny)),np.zeros(prob.nx*prob.ny)
 
 # define the iteration and convergence parameters 
 dif = 1
@@ -67,8 +67,6 @@ while (dif>dif_tolerance and log.itt<itt_max):
     v_star[:,:] = v[:,:]
     u_star,u_vector = sf.SolveMomentum(Au,bu,u_star)
     v_star,v_vector = sf.SolveMomentum(Av,bv,v_star)
-    u_star = u + prob.alpha_uv*(u_star-u)
-    v_star = v + prob.alpha_uv*(v_star-v)
     u_star,v_star = sf.ApplyVelBC(u_star,v_star,prob)
     
     # Calculate the continuity residuals
@@ -96,5 +94,5 @@ while (dif>dif_tolerance and log.itt<itt_max):
 print("\ndone")
 
 af.PlotConvergence(log)
-af.PlotFlow(u,v,prob)
-# af.CompareWithBenchmark(u, v, prob)
+af.PlotFlow(u,v,prob,"Re={}".format(Re))
+# af.CompareWithBenchmark(u, v, prob,Re)

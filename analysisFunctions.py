@@ -48,7 +48,7 @@ class Log():
         self.dt = np.zeros(n)
         self.itt = 0
         
-def PlotFlow(u,v,prob):
+def PlotFlow(u,v,prob,title=""):
     # Plots the flow-field
     X_n,Y_n = np.meshgrid(prob.xc_u,prob.yc_v)
     u_n = (u[:,:-1]+u[:,1:])/2
@@ -70,6 +70,7 @@ def PlotFlow(u,v,prob):
     plt.colorbar()
     plt.streamplot(X,Y,u_c,v_c,color="k",linewidth=2,density=3)
     plt.gca().set_aspect('equal', adjustable='box')
+    plt.title(title)
     plt.show()
 
 def PlotConvergence(log):
@@ -92,10 +93,16 @@ def PlotConvergence(log):
     ax.title.set_text("v-momentum residuals")
     plt.show()
     
-def CompareWithBenchmark(u,v,prob):
-    df = pd.read_csv(r"lid_driven_cavity_flow_Re100_benchmark\all\5000NUcav.plt",delim_whitespace=True)
-    points = df.iloc[5000:5000+2601,0:2].to_numpy()
-    df = pd.read_csv(r"lid_driven_cavity_flow_Re100_benchmark\all\5000NUcav.var",delim_whitespace=True,header=None)
+def CompareWithBenchmark(u,v,prob,Re):
+    if Re>1000:
+        NU = 20000
+        nn = 10201
+    else:
+        NU = 5000
+        nn = 2601
+    df = pd.read_csv(r"benchmark_data\Re{}\{}NUcav.plt".format(Re,NU),delim_whitespace=True)
+    points = df.iloc[NU:NU+nn,0:2].to_numpy()
+    df = pd.read_csv(r"benchmark_data\Re{}\{}NUcav.var".format(Re,NU),delim_whitespace=True,header=None)
     vals = df.to_numpy()
     interp = LinearNDInterpolator(points, vals)
     
