@@ -4,21 +4,21 @@ This project is a implementation of the SIMPLE (Semi-Implicit Method for Pressur
 The algorithm was used to solve the lid driven cavity flow and the results were compared with the benchmark data extracted from paper: Ghia et al (1982) JCP 48:387-411. The problem was solver for Reynolds numbers: 100,1000,3200
 
 <p align="center">
-  <img src="Pictures/CavityFlow_Re100.png" width="300" align="center">
-  <img src="Pictures/CavityFlowComparison_u_Re100.png" width="300" align="center">
-  <img src="Pictures/CavityFlowComparison_v_Re100.png" width="300" align="center">
+  <img src="Pictures/CavityFlow_Re100.png" width="30%" align="center">
+  <img src="Pictures/CavityFlowComparison_u_Re100.png" width="30%" align="center">
+  <img src="Pictures/CavityFlowComparison_v_Re100.png" width="30%" align="center">
 </p>
 
 <p align="center">
-  <img src="Pictures/CavityFlow_Re1000.png" width="300" align="center">
-  <img src="Pictures/CavityFlowComparison_u_Re1000.png" width="300" align="center">
-  <img src="Pictures/CavityFlowComparison_v_Re1000.png" width="300" align="center">
+  <img src="Pictures/CavityFlow_Re1000.png" width="30%" align="center">
+  <img src="Pictures/CavityFlowComparison_u_Re1000.png" width="30%" align="center">
+  <img src="Pictures/CavityFlowComparison_v_Re1000.png" width="30%" align="center">
 </p>
 
 <p align="center">
-  <img src="Pictures/CavityFlow_Re3200.png" width="300" align="center">
-  <img src="Pictures/CavityFlowComparison_u_Re3200.png" width="300" align="center">
-  <img src="Pictures/CavityFlowComparison_v_Re3200.png" width="300" align="center">
+  <img src="Pictures/CavityFlow_Re3200.png" width="30%" align="center">
+  <img src="Pictures/CavityFlowComparison_u_Re3200.png" width="30%" align="center">
+  <img src="Pictures/CavityFlowComparison_v_Re3200.png" width="30%" align="center">
 </p>
 
 
