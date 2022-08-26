@@ -19,7 +19,7 @@ def SolveFromBCfile(i):
     try:
         BCu_slice = np.load(r"DataDC\Raw\dc_BCu_30_1_5_"+str(i)+".npy")
         BCv_slice = np.load(r"DataDC\Raw\dc_BCv_30_1_5_"+str(i)+".npy")
-        converged,u,v,p,prob,log = sf.SolveCFDfromBC(BCu_slice,BCv_slice,i,alpha_uv=0.05,alpha_p=0.02,order_grid=1,rho=1,mu=0.01,dt=np.inf,CDS=True,dif_tolerance=10**(-4),max_iterations=4000)
+        converged,u,v,p,prob,log = sf.SolveCFDfromBC(BCu_slice,BCv_slice,i,alpha_uv=0.05,alpha_p=0.02,order_grid=1,rho=1,mu=0.01,dt=np.inf,CDS=True,dif_tolerance=10**(-4),max_iterations=10000)
         if converged:
             np.save(r"DataDC\Raw\dc_u_30_1_5_"+str(i)+".npy",u)
             np.save(r"DataDC\Raw\dc_v_30_1_5_"+str(i)+".npy",v)
@@ -27,7 +27,7 @@ def SolveFromBCfile(i):
             os.remove(r"DataDC\Raw\dc_BCu_30_1_5_"+str(i)+".npy")
             os.remove(r"DataDC\Raw\dc_BCv_30_1_5_"+str(i)+".npy")
         else:
-            converged,u,v,p,prob,log = sf.SolveCFDfromBC(BCu_slice,BCv_slice,i,alpha_uv=0.03,alpha_p=0.01,order_grid=1,rho=1,mu=0.01,dt=np.inf,CDS=True,dif_tolerance=10**(-4),max_iterations=10000)
+            converged,u,v,p,prob,log = sf.SolveCFDfromBC(BCu_slice,BCv_slice,i,alpha_uv=0.03,alpha_p=0.01,order_grid=1,rho=1,mu=0.01,dt=0.1,CDS=True,dif_tolerance=10**(-4),max_iterations=20000)
             if converged:
                 np.save(r"DataDC\Raw\dc_u_30_1_5_"+str(i)+".npy",u)
                 np.save(r"DataDC\Raw\dc_v_30_1_5_"+str(i)+".npy",v)
@@ -41,4 +41,4 @@ def SolveFromBCfile(i):
 
 if __name__ == '__main__':
     with Pool(5) as p:
-        p.map(SolveRandom,list(range(2000,4000)))
+        p.map(SolveFromBCfile,list(range(2000,4000)))

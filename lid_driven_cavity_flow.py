@@ -12,14 +12,14 @@ import solverFunctions as sf
 import analysisFunctions as af
 
 # constants definition
-n = 60 # number of pressure control volumes in each direction
-Re = 5000 # reyonolds number
+n = 30 # number of pressure control volumes in each direction
+Re = 100 # reyonolds number
 rho = 1
 mu = 1/Re
 nx = ny = n
 dt = np.inf # time step length
-alpha_uv = 0.3
-alpha_p = 0.1
+alpha_uv = 0.5
+alpha_p = 0.2
 CDS = True # whether to use CDS correction (the algorithm uses UDS with CDS correction in the source term)
 order = 1 # order of the deference in grid size between middle and near the boundary
 
@@ -38,10 +38,10 @@ BCu[2,:] = 1 # u-velocity of 1 on the north boundary wall
 prob = sf.CFDproblem(x,y, rho, mu, BCu, BCv,dt,alpha_uv,alpha_p,CDS)
 
 # initialize arrays storing the fluid properties
-# u,v = np.zeros((prob.nx+1,prob.ny+2)),np.zeros((prob.nx+2,prob.ny+1)) # if reshaped/flattened aixs=1 (y) will remain together
-# u_star,v_star = np.zeros((prob.nx+1,prob.ny+2)),np.zeros((prob.nx+2,prob.ny+1)) # intermediate step in the calculation
-# u_vector,v_vector = u[1:-1,1:-1].flatten(),v[1:-1,1:-1].flatten()
-# p,p_prime,p_vector = np.zeros((prob.nx,prob.ny)),np.zeros((prob.nx,prob.ny)),np.zeros(prob.nx*prob.ny)
+u,v = np.zeros((prob.nx+1,prob.ny+2)),np.zeros((prob.nx+2,prob.ny+1)) # if reshaped/flattened aixs=1 (y) will remain together
+u_star,v_star = np.zeros((prob.nx+1,prob.ny+2)),np.zeros((prob.nx+2,prob.ny+1)) # intermediate step in the calculation
+u_vector,v_vector = u[1:-1,1:-1].flatten(),v[1:-1,1:-1].flatten()
+p,p_prime,p_vector = np.zeros((prob.nx,prob.ny)),np.zeros((prob.nx,prob.ny)),np.zeros(prob.nx*prob.ny)
 
 # define the iteration and convergence parameters 
 dif = 1
