@@ -3,6 +3,7 @@ import numpy as np
 from scipy.interpolate import LinearNDInterpolator
 import pandas as pd
 import solverFunctions as sf
+from tqdm import tqdm 
 
 
 def CalcMomentumResiduals(u,v,p,prob):
@@ -134,4 +135,54 @@ def CompareWithBenchmark(u,v,prob,Re):
     plt.ylabel("v")
     plt.show()
     
+def SubplotFlow(a,b,u,v,prob):
+    n = min(a*b,u.shape[0])
+    plt.figure(figsize=(14,14))
+    for i in tqdm(range(n)):
+        X_n,Y_n = np.meshgrid(prob.xc_u,prob.yc_v)
+        u_n = (u[i,:,:-1]+u[i,:,1:])/2
+        v_n = (v[i,:-1,:]+v[i,1:,:])/2
+        u_n = np.transpose(u_n)
+        v_n = np.transpose(v_n)
+        X,Y = np.meshgrid(np.linspace(0,1,u_n.shape[0]*2),np.linspace(0,1,u_n.shape[1]*2))
+        points_n = np.concatenate([X_n.reshape(X_n.size,1),Y_n.reshape(Y_n.size,1)],axis=1)
+        values_n = np.concatenate([u_n.reshape(u_n.size,1),v_n.reshape(v_n.size,1)],axis=1)
+        interp = LinearNDInterpolator(points_n, values_n)
+        values_i = interp(X,Y)
+        u_c = values_i[:,:,0]
+        v_c = values_i[:,:,1]
+        ax = plt.subplot(a,b,i+1)
+        ax.set_ylim([0,1])
+        ax.set_xlim([0,1])
+        c = ax.pcolormesh(X,Y,np.sqrt(u_c**2+v_c**2))
+        plt.colorbar(c)
+        ax.streamplot(X,Y,u_c,v_c,color="k",linewidth=2,density=1)
+        plt.gca().set_aspect('equal', adjustable='box')
+    plt.show()
 
+def PlotX(a,b,x_train,prob):
+    n = min(a*b,x_train.shape[0])
+    plt.figure(figsize=(14,14))
+    for i in tqdm(range(n)):
+        X_n,Y_n = prob.X_p,prob.Y_p
+        x_lim = (prob.xc_p[0],prob.xc_p[-1])
+        y_lim = (prob.yc_p[0],prob.yc_p[-1])
+        u_n = x_train[i,:,:,0]
+        v_n = x_train[i,:,:,1]
+        # u_n = np.transpose(u_n)
+        # v_n = np.transpose(v_n)
+        X,Y = np.meshgrid(np.linspace(x_lim[0],y_lim[-1],u_n.shape[0]*2),np.linspace(y_lim[0],y_lim[-1],u_n.shape[1]*2))
+        points_n = np.concatenate([X_n.reshape(X_n.size,1),Y_n.reshape(Y_n.size,1)],axis=1)
+        values_n = np.concatenate([u_n.reshape(u_n.size,1),v_n.reshape(v_n.size,1)],axis=1)
+        interp = LinearNDInterpolator(points_n, values_n)
+        values_i = interp(X,Y)
+        u_c = values_i[:,:,0]
+        v_c = values_i[:,:,1]
+        ax = plt.subplot(a,b,i+1)
+        ax.set_ylim(x_lim)
+        ax.set_xlim(y_lim)
+        c = ax.pcolormesh(X,Y,np.sqrt(u_c**2+v_c**2))
+        plt.colorbar(c)
+        ax.streamplot(X,Y,u_c,v_c,color="k",linewidth=2,density=1)
+        plt.gca().set_aspect('equal', adjustable='box')
+    plt.show()

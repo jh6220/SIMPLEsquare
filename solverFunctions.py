@@ -517,7 +517,6 @@ def SolveCFD(n,order_grid,i=1,order_bc = 5,continuous=False,alpha_uv = 0.3,alpha
     y = x
     
     # define random boundary condition for lid driven cavity flow
-    order_bc = 5
     BCu,BCv,_,_,_,_ = GetBC2(x,order=order_bc,continuous=continuous)
     
     # define the structure that hold all the constants of the CFD problem
