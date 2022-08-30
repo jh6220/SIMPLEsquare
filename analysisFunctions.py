@@ -160,6 +160,7 @@ def SubplotFlow(a,b,u,v,prob):
         plt.gca().set_aspect('equal', adjustable='box')
     plt.show()
 
+
 def PlotX(a,b,x_train,prob):
     n = min(a*b,x_train.shape[0])
     plt.figure(figsize=(14,14))
