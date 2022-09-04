@@ -135,7 +135,7 @@ def CompareWithBenchmark(u,v,prob,Re):
     plt.ylabel("v")
     plt.show()
     
-def SubplotFlow(a,b,u,v,prob):
+def SubplotFlow(a,b,u,v,prob,show=True):
     n = min(a*b,u.shape[0])
     plt.figure(figsize=(14,14))
     for i in tqdm(range(n)):
@@ -158,7 +158,8 @@ def SubplotFlow(a,b,u,v,prob):
         plt.colorbar(c)
         ax.streamplot(X,Y,u_c,v_c,color="k",linewidth=2,density=1)
         plt.gca().set_aspect('equal', adjustable='box')
-    plt.show()
+    if show:
+        plt.show()
 
 
 def PlotX(a,b,x_train,prob):

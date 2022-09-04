@@ -5,7 +5,7 @@ import os
 
 def SolveRandom(i):
     # Solves random BC problem and if converges saves the solution to a file, if does not coverge saves the boundary condition file
-    order_bc=3
+    order_bc=2
     converged,u,v,p,prob,_ = sf.SolveCFD(30,1,i=i+1,order_bc = order_bc,continuous=False,alpha_uv = 0.5,alpha_p = 0.2,dif_tolerance=10**(-4),max_iterations=3000)
     if converged:
         np.save(r"DataDC\Raw\dc_u_30_1_"+str(order_bc)+"_"+str(i)+".npy",u)
@@ -47,5 +47,5 @@ def SolveFromBCfile(i):
         print("i={} not found".format(i))
 
 if __name__ == '__main__':
-    with Pool(5) as p:
-        p.map(SolveRandom,list(range(3000)))
+    with Pool() as p:
+        p.map(SolveRandom,list(range(4000)))

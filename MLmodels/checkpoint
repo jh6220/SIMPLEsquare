@@ -1,2 +1,2 @@
-model_checkpoint_path: "NS_10D_NLv4"
-all_model_checkpoint_paths: "NS_10D_NLv4"
+model_checkpoint_path: "NS_10D_Lv5"
+all_model_checkpoint_paths: "NS_10D_Lv5"
