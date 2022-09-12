@@ -21,6 +21,23 @@ def SolveRandom(i):
             np.save(r"DataDC\Raw\dc_BCu_30_1_"+str(order_bc)+"_"+str(i)+".npy",prob.BCu)
             np.save(r"DataDC\Raw\dc_BCv_30_1_"+str(order_bc)+"_"+str(i)+".npy",prob.BCv)
 
+def SolveSystematic(i):
+    # Solves random BC problem and if converges saves the solution to a file, if does not coverge saves the boundary condition file
+    converged,u,v,p,prob,_ = sf.SolveCFDSystematic(30,i,order_grid=1,order_bc = 5,continuous=False,alpha_uv = 0.5,alpha_p = 0.2,dif_tolerance=10**(-4),max_iterations=2000)
+    if converged:
+        np.save(r"DataDC\Raw\dc_u_30_sys_"+str(i)+".npy",u)
+        np.save(r"DataDC\Raw\dc_v_30_sys_"+str(i)+".npy",v)
+        np.save(r"DataDC\Raw\dc_p_30_sys_"+str(i)+".npy",p)
+    else:
+        converged,u,v,p,_,_ = sf.SolveCFDSystematic(30,i,order_grid=1,order_bc = 5,continuous=False,alpha_uv = 0.15,alpha_p = 0.05,dif_tolerance=10**(-4),max_iterations=10000)
+        if converged:
+            np.save(r"DataDC\Raw\dc_u_30_sys_"+str(i)+".npy",u)
+            np.save(r"DataDC\Raw\dc_v_30_sys_"+str(i)+".npy",v)
+            np.save(r"DataDC\Raw\dc_p_30_sys_"+str(i)+".npy",p)
+        else:
+            np.save(r"DataDC\Raw\dc_BCu_30_sys_"+str(i)+".npy",prob.BCu)
+            np.save(r"DataDC\Raw\dc_BCv_30_sys_"+str(i)+".npy",prob.BCv)
+
 def SolveFromBCfile(i):
     # Solves problem from a boundary condition file, if converged saves the solution to a file and removes the BC file
     try:
@@ -48,4 +65,4 @@ def SolveFromBCfile(i):
 
 if __name__ == '__main__':
     with Pool() as p:
-        p.map(SolveRandom,list(range(4000)))
+        p.map(SolveSystematic,list(range(100)))

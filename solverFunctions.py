@@ -94,6 +94,15 @@ def GetProblem(n,order_grid,rho=1,mu=0.01):
     prob = CFDproblem(x,y, rho, mu, BCu, BCv)
     return prob
 
+def GetProblemSystematic(n,idx,alpha_uv = 0.5,alpha_p=0.2,max_itt=2000,rho=1,mu=0.01):
+    x = get1Dgrid(n+1,order=1)
+    y = x
+    a = 0.75*idx/100
+    b = 0.25+0.75*idx/100
+    BCu,BCv,_,_,_,_ = GetBC_systematic(x,a,b)
+    prob = CFDproblem(x,y, rho, mu, BCu, BCv,alpha_uv=alpha_uv,alpha_p=alpha_p,max_iterations=max_itt)
+    return prob
+
 def GenerateHarmonics(t,order,start=1):
     # Generate a random function of given order for boundary definition
     t_in = (t[0:-1]+t[1:])/2
@@ -120,6 +129,56 @@ def GenerateDiscontinuous(t,order):
         x[:] += np.random.randn()*np.abs(np.abs(np.heaviside(t1,0.5)-np.heaviside(t2,0.5))-np.random.randint(0,2,)) #####
     x -= x.mean()
     return x
+
+def BC_vector2matrix(x,u,v):
+    nx = x.size-1
+    BCu = np.zeros((4,nx+2))
+    BCv = np.zeros((4,nx+2))
+
+    # define the wall lengths of the velocit control volumes that are pumping mass in/out of domain
+    dy = x[1:]-x[:-1]
+
+    # defines mapping between the clock-wise u and v and the system of storing boundary values with BCu/BCv
+    BCu[0,1:-2] = u[0:(nx-1)]
+    BCu[1,1:-1] = u[3*nx-2:4*nx-2][::-1]
+    BCu[2,1:-2] = u[2*nx-1:3*nx-2][::-1]
+    BCu[3,1:-1] = u[nx-1:2*nx-1]
+    BCv[0,1:-1] = v[0:nx]
+    BCv[1,1:-2] = v[3*nx-1:4*nx-2][::-1]
+    BCv[2,1:-1] = v[2*nx-1:3*nx-1][::-1]
+    BCv[3,1:-2] = v[nx:2*nx-1]
+
+    # net massflow into the domain that needs to be corrected for to satisfy continuity
+    dm_dot = (dy*BCv[0,1:-1]).sum() + (dy*BCu[1,1:-1]).sum() - ((dy*BCv[2,1:-1]).sum() + (dy*BCu[3,1:-1]).sum())
+    BCv[0,1:-1] -= dm_dot/(4)
+    BCu[1,1:-1] -= dm_dot/(4)
+    BCv[2,1:-1] += dm_dot/(4)
+    BCu[3,1:-1] += dm_dot/(4)
+    
+    BCu[0,1:-2] -= np.cos(x[1:-1]*np.pi)*dm_dot/(4)
+    BCv[1,1:-2] -= np.cos(x[1:-1]*np.pi)*dm_dot/(4)
+    BCu[2,1:-2] -= np.cos(x[1:-1]*np.pi)*dm_dot/(4)
+    BCv[3,1:-2] -= np.cos(x[1:-1]*np.pi)*dm_dot/(4)
+    
+    # get the corrected vector of boundary velocity
+    u_cor = np.concatenate([BCu[0,1:-2],BCu[3,1:-1],BCu[2,1:-2][::-1],BCu[1,1:-1][::-1]])
+    v_cor = np.concatenate([BCv[0,1:-1],BCv[3,1:-2],BCv[2,1:-1][::-1],BCv[1,1:-2][::-1]])
+    
+    return BCu,BCv,u_cor,v_cor
+
+def GetBC_systematic(x,a,b):
+    #defines the boundary condition as one discutinuity for u from a to b (a,b are in range <0,1>)
+    x_in = (x[0:-1]+x[1:])/2
+    x_bc = np.concatenate([x_in,x+1,x_in+2,x+3])/4
+    x_bc_b = x_bc - a
+    x_bc_a = x_bc - b
+    n = x_bc.shape[0]
+    u = np.heaviside(x_bc_b,0.5)-np.heaviside(x_bc_a,0.5)
+    v = np.zeros(n)
+
+    BCu,BCv,u_cor,v_cor = BC_vector2matrix(x,u,v)
+
+    return BCu,BCv,u,v,u_cor,v_cor
     
 
 def GetBC2(x,order = 3,continuous=True):
@@ -529,6 +588,25 @@ def SolveCFD(n,order_grid,i=1,order_bc = 5,continuous=False,alpha_uv = 0.3,alpha
         return (log.dif[log.itt-1]<(dif_tolerance)),u,v,p,prob,log
     except:
         print('i={}... error'.format(i))
+        return False,None,None,None,prob,log
+
+def SolveCFDSystematic(n,idx,order_grid=1,order_bc = 5,continuous=False,alpha_uv = 0.3,alpha_p = 0.1,dif_tolerance=10**(-4),max_iterations=2000):
+    # constants definition
+    rho = 1
+    mu = 0.01
+    nx = ny = n
+    dt = np.inf
+    CDS = True
+    
+    prob = GetProblemSystematic(n,idx,alpha_uv=alpha_uv,alpha_p=alpha_p,max_itt=max_iterations)
+    
+    try:
+        # try to solve the CFD problem
+        u,v,p,log = SolveProblem(prob,showProgress=True)
+        print('i={}; dif={:.4g}; res={:.4g}; itt={}\t\t'.format(idx,log.dif[log.itt-1],log.res[log.itt-1],log.itt))
+        return (log.dif[log.itt-1]<(dif_tolerance)),u,v,p,prob,log
+    except:
+        print('i={}... error'.format(idx))
         return False,None,None,None,prob,log
 
 def SolveCFDfromBC(BCu,BCv,i,alpha_uv=0.15,alpha_p=0.05,order_grid=1,rho=1,mu=0.01,dt=np.inf,CDS=True,dif_tolerance=10**(-4),showProgress=False,max_iterations=2000):
